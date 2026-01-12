@@ -1,0 +1,80 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="dashboard-card mb-4">
+            <h4><i class="fas fa-chart-line"></i> Daily Statistics (Last 30 Days)</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Orders</th>
+                            <th>Revenue</th>
+                            <th>Avg Credit Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in daily_stats %}
+                        <tr>
+                            <td>{{ day.date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ day.orders }}</td>
+                            <td>₹{{ day.revenue or 0 }}</td>
+                            <td>
+                                <div class="credit-badge credit-{{ 'good' if day.avg_credit_score >= 75 else 'average' if day.avg_credit_score >= 50 else 'risky' }}">
+                                    {{ day.avg_credit_score|round(1) if day.avg_credit_score else 'N/A' }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="dashboard-card mb-4">
+            <h4><i class="fas fa-chart-pie"></i> Credit Score Distribution</h4>
+            <div class="mt-4">
+                {% for dist in credit_distribution %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="credit-badge credit-{{ dist.credit_status }}">
+                        {{ dist.credit_status|title }}
+                    </span>
+                    <strong>{{ dist.count }}</strong>
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-{{ 'success' if dist.credit_status == 'trusted' else 'info' if dist.credit_status == 'good' else 'warning' if dist.credit_status == 'average' else 'danger' }}" 
+                         style="width: {{ (dist.count * 100 / credit_distribution|sum(attribute='count'))|round(1) }}%">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h4><i class="fas fa-lightbulb"></i> Quick Insights</h4>
+            <div class="mt-3">
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-arrow-up"></i> Platform Growth</h6>
+                    <p class="mb-0">Total users increased by 15% this month</p>
+                </div>
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Attention Needed</h6>
+                    <p class="mb-0">{{ credit_distribution|selectattr('credit_status', 'equalto', 'risky')|map(attribute='count')|first or 0 }} users in risky zone</p>
+                </div>
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-chart-bar"></i> Performance</h6>
+                    <p class="mb-0">Average order value: ₹450</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // You can add charts here using Chart.js if needed
+</script>
+{% endblock %}

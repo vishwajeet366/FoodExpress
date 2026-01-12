@@ -1,0 +1,112 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="dashboard-card mb-4">
+            <h4><i class="fas fa-users"></i> User Management</h4>
+            <p class="text-muted">Manage all users and their credit scores</p>
+            
+            <div class="table-responsive">
+                <table class="table table-hover user-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Credit Score</th>
+                            <th>Status</th>
+                            <th>Orders</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="user-row {{ user.credit_status }}">
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge 
+                                    {{ 'badge-primary' if user.role == 'customer' else 
+                                       'badge-success' if user.role == 'restaurant' else 
+                                       'badge-warning' if user.role == 'delivery' else 
+                                       'badge-dark' }}">
+                                    {{ user.role|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="credit-badge credit-{{ user.credit_status }}">
+                                    {{ user.credit_score }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge badge-success">Active</span>
+                                {% else %}
+                                <span class="badge badge-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ user.total_orders or 0 }}</div>
+                                <small class="text-danger">{{ user.cancelled_orders or 0 }} cancelled</small>
+                            </td>
+                            <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" 
+                                            onclick="viewUser({{ user.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" 
+                                            data-toggle="modal" 
+                                            data-target="#creditModal{{ user.id }}">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editUser({{ user.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-{{ 'danger' if user.is_active else 'success' }}" 
+                                            onclick="toggleUserStatus({{ user.id }}, {{ user.is_active }})">
+                                        <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function viewUser(userId) {
+        window.location.href = `/admin/user/${userId}`;
+    }
+    
+    function editUser(userId) {
+        showNotification('Info', 'Edit user feature coming soon!', 'info');
+    }
+    
+    function toggleUserStatus(userId, isActive) {
+        const action = isActive ? 'deactivate' : 'activate';
+        if (confirm(`Are you sure you want to ${action} this user?`)) {
+            fetch(`/api/admin/toggle_user_status/${userId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Success', `User ${action}d successfully`, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

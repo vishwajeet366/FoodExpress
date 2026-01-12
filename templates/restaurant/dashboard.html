@@ -1,0 +1,620 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="dashboard-card mb-4">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-store fa-3x text-success"></i>
+                </div>
+                <h5>{{ restaurant.name }}</h5>
+                <p class="text-muted">{{ restaurant.cuisine_type }}</p>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <span class="rating-stars mr-2">
+                        {% for i in range(5) %}
+                            {% if i < restaurant.rating|int %}
+                                ★
+                            {% else %}
+                                ☆
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                    <span class="badge badge-success">{{ restaurant.rating|round(1) }}</span>
+                </div>
+                
+                {% if restaurant.trust_badge %}
+                <div class="badge badge-primary mb-2">
+                    <i class="fas fa-shield-alt"></i> Trusted Restaurant
+                </div>
+                {% endif %}
+                
+                <div class="mt-2">
+                    <span class="badge {{ 'badge-success' if restaurant.is_open else 'badge-danger' }}">
+                        {{ 'Open' if restaurant.is_open else 'Closed' }}
+                    </span>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link active" href="{{ url_for('restaurant_dashboard') }}">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/restaurant/orders">
+                    <i class="fas fa-shopping-bag mr-2"></i> Orders
+                </a>
+                <a class="nav-link" href="/restaurant/menu">
+                    <i class="fas fa-utensils mr-2"></i> Menu
+                </a>
+                <a class="nav-link" href="/restaurant/feedback">
+                    <i class="fas fa-star mr-2"></i> Customer Feedback
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-chart-line mr-2"></i> Analytics
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-cog mr-2"></i> Settings
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h6><i class="fas fa-info-circle"></i> Quick Actions</h6>
+            <div class="mt-3">
+                <button class="btn btn-success btn-block mb-2" onclick="toggleRestaurantStatus()">
+                    <i class="fas fa-power-off"></i> 
+                    {{ 'Close Restaurant' if restaurant.is_open else 'Open Restaurant' }}
+                </button>
+                <button class="btn btn-primary btn-block mb-2" data-toggle="modal" data-target="#addItemModal">
+                    <i class="fas fa-plus"></i> Add Menu Item
+                </button>
+                <button class="btn btn-warning btn-block mb-2" onclick="updatePreparationTime()">
+                    <i class="fas fa-clock"></i> Update Prep Time
+                </button>
+                <button class="btn btn-info btn-block" onclick="viewTodayEarnings()">
+                    <i class="fas fa-rupee-sign"></i> Today's Earnings
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <!-- Today's Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.total_orders or 0 }}</div>
+                    <div class="stat-label">Today's Orders</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.completed_orders or 0 }}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.cancelled_orders or 0 }}</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">₹{{ stats.total_earnings or 0 }}</div>
+                    <div class="stat-label">Today's Earnings</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pending Orders -->
+        <div class="dashboard-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-clock text-warning"></i> Pending Orders</h5>
+                <span class="badge badge-warning">{{ pending_orders|length }} orders</span>
+            </div>
+            
+            {% if pending_orders and pending_orders|length > 0 %}
+            <div class="row">
+                {% for order in pending_orders %}
+                <div class="col-md-6 mb-3">
+                    <div class="order-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">Order #{{ order.order_number }}</h6>
+                                <p class="mb-1 small">
+                                    <i class="fas fa-user"></i> {{ order.customer_name }}
+                                </p>
+                                <div class="credit-badge {{ 'credit-' + order.credit_status }} small">
+                                    <i class="fas fa-star"></i> Score: {{ order.credit_score }}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="order-status status-{{ order.status }}">
+                                    {{ order.status|title }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ order.minutes_passed }} min ago
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p class="mb-1">
+                                <i class="fas fa-rupee-sign"></i> 
+                                <strong>₹{{ order.final_amount }}</strong>
+                            </p>
+                            <small class="text-muted">
+                                Customer Credit: {{ order.credit_score }} ({{ order.credit_status|title }})
+                            </small>
+                        </div>
+                        
+                        <div class="btn-group btn-group-sm w-100">
+                            {% if order.status == 'pending' %}
+                            <button class="btn btn-success" 
+                                    onclick="updateOrderStatus({{ order.id }}, 'accepted')">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                            <button class="btn btn-danger" 
+                                    onclick="rejectOrder({{ order.id }})">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                            {% elif order.status == 'accepted' %}
+                            <button class="btn btn-primary" 
+                                    onclick="updateOrderStatus({{ order.id }}, 'preparing')">
+                                <i class="fas fa-utensils"></i> Start Prep
+                            </button>
+                            {% elif order.status == 'preparing' %}
+                            <button class="btn btn-warning" 
+                                    onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                <i class="fas fa-check-double"></i> Mark Ready
+                            </button>
+                            {% elif order.status == 'ready' %}
+                            <button class="btn btn-info">
+                                <i class="fas fa-truck"></i> Out for Delivery
+                            </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-secondary" 
+                                    data-toggle="modal" 
+                                    data-target="#feedbackModal{{ order.id }}">
+                                <i class="fas fa-star"></i> Rate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feedback Modal for each order -->
+                <div class="modal fade" id="feedbackModal{{ order.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Rate Customer</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label>Politeness</label>
+                                    <div class="star-rating">
+                                        {% for i in range(1, 6) %}
+                                        <input type="radio" id="politeness{{ order.id }}_{{ i }}" 
+                                               name="politeness{{ order.id }}" value="{{ i }}">
+                                        <label for="politeness{{ order.id }}_{{ i }}">★</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Pickup Punctuality</label>
+                                    <div class="star-rating">
+                                        {% for i in range(1, 6) %}
+                                        <input type="radio" id="punctuality{{ order.id }}_{{ i }}" 
+                                               name="punctuality{{ order.id }}" value="{{ i }}">
+                                        <label for="punctuality{{ order.id }}_{{ i }}">★</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Order Authenticity</label>
+                                    <div class="star-rating">
+                                        {% for i in range(1, 6) %}
+                                        <input type="radio" id="authenticity{{ order.id }}_{{ i }}" 
+                                               name="authenticity{{ order.id }}" value="{{ i }}">
+                                        <label for="authenticity{{ order.id }}_{{ i }}">★</label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Comments</label>
+                                    <textarea class="form-control" id="comments{{ order.id }}" 
+                                              rows="2" placeholder="Any additional comments..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                    Cancel
+                                </button>
+                                <button type="button" class="btn btn-primary" 
+                                        onclick="submitCustomerFeedback({{ order.id }})">
+                                    Submit Feedback
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                <h5>No Pending Orders</h5>
+                <p class="text-muted">All orders are processed or no new orders received.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Menu Items -->
+        <div class="dashboard-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-utensils"></i> Menu Items</h5>
+                <div>
+                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addItemModal">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="refreshMenu()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            
+            {% if menu_items and menu_items|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Prep Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in menu_items %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.name }}</strong>
+                                {% if item.description %}
+                                <br><small class="text-muted">{{ item.description[:50] }}...</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.category }}</td>
+                            <td>₹{{ item.price }}</td>
+                            <td>{{ item.prep_time }} min</td>
+                            <td>
+                                {% if item.is_available %}
+                                <span class="badge badge-success">Available</span>
+                                {% else %}
+                                <span class="badge badge-danger">Out of Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" 
+                                            onclick="editMenuItem({{ item.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" 
+                                            onclick="toggleItemStatus({{ item.id }}, {{ item.is_available }})">
+                                        <i class="fas fa-toggle-{{ 'on' if item.is_available else 'off' }}"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="deleteMenuItem({{ item.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                <h5>No Menu Items</h5>
+                <p class="text-muted">Add your first menu item to start receiving orders.</p>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#addItemModal">
+                    <i class="fas fa-plus"></i> Add First Item
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Menu Item</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addItemForm">
+                    <div class="form-group">
+                        <label for="itemName">Item Name *</label>
+                        <input type="text" class="form-control" id="itemName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemDescription">Description</label>
+                        <textarea class="form-control" id="itemDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemPrice">Price (₹) *</label>
+                                <input type="number" class="form-control" id="itemPrice" min="1" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemCategory">Category *</label>
+                                <select class="form-control" id="itemCategory" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Appetizers">Appetizers</option>
+                                    <option value="Main Course">Main Course</option>
+                                    <option value="Desserts">Desserts</option>
+                                    <option value="Beverages">Beverages</option>
+                                    <option value="Specials">Specials</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemPrepTime">Preparation Time (minutes)</label>
+                                <input type="number" class="form-control" id="itemPrepTime" min="1" value="15">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemAvailability">Availability</label>
+                                <select class="form-control" id="itemAvailability">
+                                    <option value="1">Available</option>
+                                    <option value="0">Out of Stock</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemImage">Image URL (optional)</label>
+                        <input type="url" class="form-control" id="itemImage" 
+                               placeholder="https://example.com/image.jpg">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addMenuItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Menu Item</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="editItemContent">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateOrderStatus(orderId, status) {
+        fetch('/api/update_order_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', `Order marked as ${status}`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error', 'Unable to update order status', 'error');
+        });
+    }
+    
+    function rejectOrder(orderId) {
+        const reason = prompt('Reason for rejecting this order:');
+        if (reason) {
+            fetch('/api/update_order_status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    status: 'cancelled',
+                    reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Success', 'Order rejected', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification('Error', data.message, 'error');
+                }
+            });
+        }
+    }
+    
+    function toggleRestaurantStatus() {
+        const newStatus = !{{ restaurant.is_open|tojson }};
+        fetch('/api/toggle_restaurant_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                is_open: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 
+                    `Restaurant ${newStatus ? 'opened' : 'closed'}`, 
+                    'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+    }
+    
+    function addMenuItem() {
+        const itemData = {
+            name: document.getElementById('itemName').value,
+            description: document.getElementById('itemDescription').value,
+            price: parseFloat(document.getElementById('itemPrice').value),
+            category: document.getElementById('itemCategory').value,
+            prep_time: parseInt(document.getElementById('itemPrepTime').value) || 15,
+            is_available: document.getElementById('itemAvailability').value === '1',
+            image_url: document.getElementById('itemImage').value || null
+        };
+        
+        // In a real app, send to backend
+        showNotification('Success', 'Menu item added successfully', 'success');
+        $('#addItemModal').modal('hide');
+        setTimeout(() => location.reload(), 1500);
+    }
+    
+    function editMenuItem(itemId) {
+        // Fetch item details and populate edit modal
+        fetch(`/api/get_menu_item/${itemId}`)
+            .then(response => response.json())
+            .then(data => {
+                const item = data.item;
+                const html = `
+                    <form onsubmit="updateMenuItem(${itemId}); return false;">
+                        <div class="form-group">
+                            <label>Item Name</label>
+                            <input type="text" class="form-control" value="${item.name}" id="editName${itemId}">
+                        </div>
+                        <div class="form-group">
+                            <label>Price</label>
+                            <input type="number" class="form-control" value="${item.price}" id="editPrice${itemId}">
+                        </div>
+                        <div class="form-group">
+                            <label>Availability</label>
+                            <select class="form-control" id="editAvailability${itemId}">
+                                <option value="1" ${item.is_available ? 'selected' : ''}>Available</option>
+                                <option value="0" ${!item.is_available ? 'selected' : ''}>Out of Stock</option>
+                            </select>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                `;
+                
+                document.getElementById('editItemContent').innerHTML = html;
+                $('#editItemModal').modal('show');
+            });
+    }
+    
+    function toggleItemStatus(itemId, currentStatus) {
+        const newStatus = !currentStatus;
+        fetch(`/api/toggle_item_status/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                is_available: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 
+                    `Item ${newStatus ? 'made available' : 'marked out of stock'}`, 
+                    'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+    }
+    
+    function refreshMenu() {
+        location.reload();
+    }
+    
+    function viewTodayEarnings() {
+        alert(`Today's Earnings: ₹${ {{ stats.total_earnings or 0 }} }`);
+    }
+</script>
+
+<style>
+.star-rating {
+    direction: rtl;
+    display: inline-block;
+}
+.star-rating input {
+    display: none;
+}
+.star-rating label {
+    color: #ddd;
+    font-size: 24px;
+    padding: 0 3px;
+    cursor: pointer;
+}
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: #ffd700;
+}
+</style>
+{% endblock %}

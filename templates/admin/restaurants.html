@@ -1,0 +1,119 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="dashboard-card mb-4">
+            <h4><i class="fas fa-store"></i> Restaurant Management</h4>
+            <p class="text-muted">Manage all restaurants and verify trust badges</p>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Restaurant</th>
+                            <th>Owner</th>
+                            <th>Cuisine</th>
+                            <th>Status</th>
+                            <th>Trust Badge</th>
+                            <th>Rating</th>
+                            <th>Orders</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for restaurant in restaurants %}
+                        <tr>
+                            <td>{{ restaurant.id }}</td>
+                            <td>
+                                <strong>{{ restaurant.name }}</strong><br>
+                                <small class="text-muted">{{ restaurant.address[:50] }}...</small>
+                            </td>
+                            <td>
+                                <div>{{ restaurant.owner_name }}</div>
+                                <small class="text-muted">{{ restaurant.owner_email }}</small>
+                            </td>
+                            <td>{{ restaurant.cuisine_type }}</td>
+                            <td>
+                                {% if restaurant.is_open %}
+                                <span class="badge badge-success">Open</span>
+                                {% else %}
+                                <span class="badge badge-danger">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if restaurant.trust_badge %}
+                                <span class="badge badge-primary">✓ Trusted</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Not Verified</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if restaurant.avg_rating %}
+                                <span class="rating-stars">
+                                    {% for i in range(5) %}
+                                        {% if i < restaurant.avg_rating|int %}
+                                            ★
+                                        {% else %}
+                                            ☆
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <span class="ml-1">{{ restaurant.avg_rating|round(1) }}</span>
+                                {% else %}
+                                <span class="text-muted">No ratings</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ restaurant.total_orders or 0 }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" 
+                                            onclick="viewRestaurant({{ restaurant.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-{{ 'warning' if restaurant.trust_badge else 'success' }}" 
+                                            onclick="toggleTrustBadge({{ restaurant.id }}, {{ restaurant.trust_badge }})">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editRestaurant({{ restaurant.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function viewRestaurant(restaurantId) {
+        window.location.href = `/admin/restaurant/${restaurantId}`;
+    }
+    
+    function toggleTrustBadge(restaurantId, hasBadge) {
+        const action = hasBadge ? 'remove' : 'add';
+        if (confirm(`Are you sure you want to ${action} trust badge?`)) {
+            fetch(`/api/admin/toggle_trust_badge/${restaurantId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Success', `Trust badge ${action}ed`, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+        }
+    }
+    
+    function editRestaurant(restaurantId) {
+        showNotification('Info', 'Edit restaurant feature coming soon!', 'info');
+    }
+</script>
+{% endblock %}

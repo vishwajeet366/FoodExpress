@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ restaurant.name }} - Food Delivery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .menu-category {
+            margin-bottom: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background: white;
+        }
+        .menu-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 15px 0;
+            transition: background-color 0.2s;
+        }
+        .menu-item:hover {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 0 -15px;
+        }
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+        .item-image {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+        .cart-sidebar {
+            position: sticky;
+            top: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .cart-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 10px 0;
+        }
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .quantity-btn:hover {
+            background: #f8f9fa;
+        }
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .trust-badge-large {
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('customer_dashboard') }}">
+                <i class="fas fa-utensils me-2"></i>Food Delivery
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer_restaurants') }}">
+                            <i class="fas fa-store me-1"></i>Restaurants
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer_orders') }}">
+                            <i class="fas fa-list-alt me-1"></i>My Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer_profile') }}">
+                            <i class="fas fa-user me-1"></i>Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Restaurant Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <a href="{{ url_for('customer_restaurants') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Restaurants
+                        </a>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            Your Credit Score: <span class="badge bg-info">{{ session.credit_score }}</span>
+                            {% if discount > 0 %}
+                            | Discount: <span class="badge bg-success">{{ discount }}%</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3">
+                                        <div class="item-image">
+                                            <i class="fas fa-utensils fa-2x"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h2 class="mb-1">{{ restaurant.name }}</h2>
+                                        {% if restaurant.trust_badge %}
+                                        <div class="trust-badge-large">
+                                            <i class="fas fa-check-circle me-1"></i>Trusted Restaurant
+                                        </div>
+                                        {% endif %}
+                                        <p class="text-muted mb-2">
+                                            <i class="fas fa-utensils me-1"></i>{{ restaurant.cuisine_type }}
+                                            <span class="mx-2">•</span>
+                                            <i class="fas fa-clock me-1"></i>{{ restaurant.avg_prep_time }} min avg prep time
+                                        </p>
+                                        <p class="mb-0">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ restaurant.address }}
+                                        </p>
+                                        {% if restaurant.phone %}
+                                        <p class="mb-0">
+                                            <i class="fas fa-phone me-1"></i>{{ restaurant.phone }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                {% if restaurant.rating > 0 %}
+                                <div class="display-6 mb-2">
+                                    <i class="fas fa-star text-warning"></i> {{ "%.1f"|format(restaurant.rating) }}
+                                </div>
+                                {% endif %}
+                                <div class="mb-2">
+                                    <span class="badge bg-primary">{{ restaurant.avg_prep_time }} min</span>
+                                    <span class="badge bg-secondary">Prep Time</span>
+                                </div>
+                                <div>
+                                    {% if restaurant.is_open %}
+                                    <span class="badge bg-success">Open Now</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Closed</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Menu Section -->
+            <div class="col-lg-8">
+                {% if menu_by_category %}
+                    {% for category, items in menu_by_category.items() %}
+                    <div class="menu-category">
+                        <h4 class="mb-4">
+                            <i class="fas fa-utensils me-2"></i>{{ category }}
+                            <small class="text-muted ms-2">({{ items|length }} items)</small>
+                        </h4>
+                        
+                        {% for item in items %}
+                        <div class="menu-item">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <div class="item-image">
+                                        {% if item.image_url %}
+                                        <img src="{{ item.image_url }}" alt="{{ item.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                                        {% else %}
+                                        <i class="fas fa-utensils fa-2x"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-1">{{ item.name }}</h5>
+                                            {% if item.description %}
+                                            <p class="text-muted small mb-2">{{ item.description }}</p>
+                                            {% endif %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="text-primary fw-bold">₹{{ "%.2f"|format(item.price) }}</span>
+                                                <span class="text-muted ms-3">
+                                                    <i class="fas fa-clock me-1"></i>{{ item.prep_time }} min
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-outline-primary btn-sm add-to-cart-btn" 
+                                                    data-item-id="{{ item.id }}"
+                                                    data-item-name="{{ item.name }}"
+                                                    data-item-price="{{ item.price }}">
+                                                <i class="fas fa-plus me-1"></i>Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No menu items available at the moment.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Cart Sidebar -->
+            <div class="col-lg-4">
+                <div class="cart-sidebar">
+                    <h4 class="mb-4">
+                        <i class="fas fa-shopping-cart me-2"></i>Your Order
+                        <span id="cartItemCount" class="badge bg-primary ms-2">0</span>
+                    </h4>
+                    
+                    <div id="cartItems">
+                        <div class="text-muted text-center py-4">
+                            <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                            <p>Your cart is empty</p>
+                            <p class="small">Add items from the menu</p>
+                        </div>
+                    </div>
+                    
+                    <div id="cartSummary" style="display: none;">
+                        <div class="border-top pt-3 mt-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Subtotal:</span>
+                                <span id="subtotal">₹0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Delivery Fee:</span>
+                                <span>₹30.00</span>
+                            </div>
+                            {% if discount > 0 %}
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span>Discount ({{ discount }}%):</span>
+                                <span id="discountAmount">-₹0.00</span>
+                            </div>
+                            {% endif %}
+                            <div class="d-flex justify-content-between fw-bold border-top pt-2">
+                                <span>Total:</span>
+                                <span id="totalAmount">₹0.00</span>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button class="btn btn-danger w-100 mb-2" id="clearCartBtn">
+                                    <i class="fas fa-trash me-1"></i>Clear Cart
+                                </button>
+                                <button class="btn btn-success w-100" id="checkoutBtn" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                                    <i class="fas fa-credit-card me-1"></i>Proceed to Checkout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Complete Your Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="checkoutForm" action="{{ url_for('checkout') }}" method="POST">
+                    <input type="hidden" name="restaurant_id" value="{{ restaurant.id }}">
+                    
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Delivery Address</label>
+                            <textarea class="form-control" name="delivery_address" rows="3" required 
+                                      placeholder="Enter your complete delivery address"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <select class="form-select" name="payment_method">
+                                <option value="wallet">Wallet</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="netbanking">Net Banking</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Your order total includes your credit-based discount of {{ discount }}%.
+                        </div>
+                        
+                        <div id="orderSummary">
+                            <!-- Dynamic order summary will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Place Order
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-utensils me-2"></i>Food Delivery</h5>
+                    <p class="mb-0">Order food from your favorite restaurants with credit-based discounts.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">&copy; 2024 Food Delivery System. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let cart = {};
+        const restaurantId = {{ restaurant.id }};
+        const discountPercentage = {{ discount }};
+        
+        // Initialize cart from session
+        function loadCart() {
+            fetch(`/api/get_cart/${restaurantId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateCartDisplay(data.cart_items, data.total);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading cart:', error);
+                });
+        }
+        
+        // Add item to cart
+        document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const itemId = this.dataset.itemId;
+                const itemName = this.dataset.itemName;
+                const itemPrice = parseFloat(this.dataset.itemPrice);
+                
+                fetch('/api/add_to_cart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        restaurant_id: restaurantId,
+                        item_id: itemId,
+                        quantity: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', `${itemName} added to cart`);
+                        loadCart();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding to cart:', error);
+                    showAlert('error', 'Failed to add item to cart');
+                });
+            });
+        });
+        
+        // Update cart display
+        function updateCartDisplay(items, total) {
+            const cartItemsDiv = document.getElementById('cartItems');
+            const cartSummaryDiv = document.getElementById('cartSummary');
+            const cartItemCount = document.getElementById('cartItemCount');
+            const subtotalSpan = document.getElementById('subtotal');
+            const discountSpan = document.getElementById('discountAmount');
+            const totalSpan = document.getElementById('totalAmount');
+            
+            if (items.length === 0) {
+                cartItemsDiv.innerHTML = `
+                    <div class="text-muted text-center py-4">
+                        <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                        <p>Your cart is empty</p>
+                        <p class="small">Add items from the menu</p>
+                    </div>
+                `;
+                cartSummaryDiv.style.display = 'none';
+                cartItemCount.textContent = '0';
+                return;
+            }
+            
+            // Update cart items
+            let itemsHtml = '';
+            items.forEach(item => {
+                itemsHtml += `
+                    <div class="cart-item" data-item-id="${item.id}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">${item.name}</h6>
+                                <p class="text-muted small mb-0">₹${item.price.toFixed(2)} each</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger remove-item-btn" 
+                                    data-item-id="${item.id}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="quantity-control">
+                                <button class="quantity-btn minus-btn" data-item-id="${item.id}">-</button>
+                                <input type="number" class="quantity-input" 
+                                       value="${item.quantity}" min="1" max="99"
+                                       data-item-id="${item.id}">
+                                <button class="quantity-btn plus-btn" data-item-id="${item.id}">+</button>
+                            </div>
+                            <div class="fw-bold">
+                                ₹${item.subtotal.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cartItemsDiv.innerHTML = itemsHtml;
+            
+            // Calculate discount
+            const discountAmount = total * discountPercentage / 100;
+            const deliveryFee = 30;
+            const totalAmount = total + deliveryFee - discountAmount;
+            
+            // Update summary
+            subtotalSpan.textContent = `₹${total.toFixed(2)}`;
+            if (discountSpan) {
+                discountSpan.textContent = `-₹${discountAmount.toFixed(2)}`;
+            }
+            totalSpan.textContent = `₹${totalAmount.toFixed(2)}`;
+            
+            // Update checkout modal summary
+            updateCheckoutSummary(items, total, discountAmount, deliveryFee, totalAmount);
+            
+            // Show summary
+            cartSummaryDiv.style.display = 'block';
+            cartItemCount.textContent = items.length;
+            
+            // Attach event listeners to cart controls
+            attachCartControls();
+        }
+        
+        // Attach event listeners to cart controls
+        function attachCartControls() {
+            // Quantity minus buttons
+            document.querySelectorAll('.minus-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const itemId = this.dataset.itemId;
+                    const input = document.querySelector(`.quantity-input[data-item-id="${itemId}"]`);
+                    let quantity = parseInt(input.value) - 1;
+                    
+                    if (quantity < 1) quantity = 1;
+                    updateCartItem(itemId, quantity);
+                });
+            });
+            
+            // Quantity plus buttons
+            document.querySelectorAll('.plus-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const itemId = this.dataset.itemId;
+                    const input = document.querySelector(`.quantity-input[data-item-id="${itemId}"]`);
+                    let quantity = parseInt(input.value) + 1;
+                    
+                    if (quantity > 99) quantity = 99;
+                    updateCartItem(itemId, quantity);
+                });
+            });
+            
+            // Quantity input changes
+            document.querySelectorAll('.quantity-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const itemId = this.dataset.itemId;
+                    let quantity = parseInt(this.value);
+                    
+                    if (quantity < 1) quantity = 1;
+                    if (quantity > 99) quantity = 99;
+                    
+                    this.value = quantity;
+                    updateCartItem(itemId, quantity);
+                });
+            });
+            
+            // Remove item buttons
+            document.querySelectorAll('.remove-item-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const itemId = this.dataset.itemId;
+                    updateCartItem(itemId, 0);
+                });
+            });
+        }
+        
+        // Update cart item quantity
+        function updateCartItem(itemId, quantity) {
+            fetch('/api/update_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    restaurant_id: restaurantId,
+                    item_id: itemId,
+                    quantity: quantity
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCart();
+                }
+            })
+            .catch(error => {
+                console.error('Error updating cart:', error);
+                showAlert('error', 'Failed to update cart');
+            });
+        }
+        
+        // Clear cart
+        document.getElementById('clearCartBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear your cart?')) {
+                fetch(`/api/clear_cart/${restaurantId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', 'Cart cleared');
+                        loadCart();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error clearing cart:', error);
+                    showAlert('error', 'Failed to clear cart');
+                });
+            }
+        });
+        
+        // Update checkout summary
+        function updateCheckoutSummary(items, subtotal, discount, delivery, total) {
+            let summaryHtml = `
+                <h6>Order Summary</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+            `;
+            
+            items.forEach(item => {
+                summaryHtml += `
+                    <tr>
+                        <td>${item.name} × ${item.quantity}</td>
+                        <td class="text-end">₹${item.subtotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            summaryHtml += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td class="text-end">₹${subtotal.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td>Delivery Fee:</td>
+                                <td class="text-end">₹${delivery.toFixed(2)}</td>
+                            </tr>
+            `;
+            
+            if (discount > 0) {
+                summaryHtml += `
+                            <tr class="text-success">
+                                <td>Discount (${discountPercentage}%):</td>
+                                <td class="text-end">-₹${discount.toFixed(2)}</td>
+                            </tr>
+                `;
+            }
+            
+            summaryHtml += `
+                            <tr class="fw-bold">
+                                <td>Total:</td>
+                                <td class="text-end">₹${total.toFixed(2)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('orderSummary').innerHTML = summaryHtml;
+        }
+        
+        // Checkout form submission
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            const cartItems = document.querySelectorAll('.cart-item');
+            if (cartItems.length === 0) {
+                e.preventDefault();
+                showAlert('error', 'Your cart is empty');
+                return false;
+            }
+            
+            // Disable button to prevent double submission
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+        });
+        
+        // Show alert function
+        function showAlert(type, message) {
+            const alertClass = type === 'error' ? 'danger' : type;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+            alertDiv.style.zIndex = '1050';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        // Load cart on page load
+        document.addEventListener('DOMContentLoaded', loadCart);
+        
+        // Flash messages handling
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showAlert('{{ category }}', '{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

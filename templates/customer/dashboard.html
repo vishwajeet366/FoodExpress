@@ -1,0 +1,433 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="dashboard-card mb-4">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-circle fa-4x text-primary"></i>
+                </div>
+                <h5>{{ session.user_name }}</h5>
+                <p class="text-muted">{{ session.email if session.email else 'Customer' }}</p>
+                
+                <div class="credit-badge {{ 'credit-' + session.credit_status if session.credit_status else 'credit-average' }} mb-3">
+                    <i class="fas fa-star"></i> Score: {{ session.credit_score }}
+                </div>
+                
+                <div class="credit-meter">
+                    <div class="meter-bar">
+                        <div class="meter-pointer" style="left: {{ session.credit_score }}%;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>0</span>
+                        <span>25</span>
+                        <span>50</span>
+                        <span>75</span>
+                        <span>100</span>
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link active" href="{{ url_for('customer_dashboard') }}">
+                    <i class="fas fa-home mr-2"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/customer/orders">
+                    <i class="fas fa-shopping-bag mr-2"></i> My Orders
+                </a>
+                <a class="nav-link" href="/customer/profile">
+                    <i class="fas fa-user-circle mr-2"></i> Profile
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-heart mr-2"></i> Favorites
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-wallet mr-2"></i> Wallet
+                </a>
+                <a class="nav-link" href="#">
+                    <i class="fas fa-cog mr-2"></i> Settings
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h6><i class="fas fa-gift text-success"></i> Active Discounts</h6>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Discount</span>
+                    <span class="text-success font-weight-bold">{{ discount }}%</span>
+                </div>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" style="width: {{ discount }}%"></div>
+                </div>
+                <small class="text-muted">
+                    Based on your current credit score of {{ session.credit_score }}
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <!-- Search and Filter -->
+        <div class="dashboard-card mb-4">
+            <div class="search-bar">
+                <div class="input-group">
+                    <input type="text" class="form-control border-0" id="searchInput" 
+                           placeholder="Search restaurants, cuisine, dishes...">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" onclick="searchRestaurants()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-buttons mt-3">
+                <button class="filter-btn active" onclick="filterByCuisine('')">All</button>
+                <button class="filter-btn" onclick="filterByCuisine('Indian')">Indian</button>
+                <button class="filter-btn" onclick="filterByCuisine('Chinese')">Chinese</button>
+                <button class="filter-btn" onclick="filterByCuisine('Italian')">Italian</button>
+                <button class="filter-btn" onclick="filterByCuisine('Fast Food')">Fast Food</button>
+                <button class="filter-btn" onclick="filterByCuisine('Beverages')">Beverages</button>
+                <select class="form-control d-inline-block w-auto ml-2" id="ratingFilter">
+                    <option value="0">All Ratings</option>
+                    <option value="4">4+ Stars</option>
+                    <option value="4.5">4.5+ Stars</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Credit Score Alert -->
+        {% if session.credit_score < 50 %}
+        <div class="alert alert-warning mb-4">
+            <h5><i class="fas fa-exclamation-triangle"></i> Credit Score Alert</h5>
+            <p class="mb-2">Your credit score is low ({{ session.credit_score }}). This affects your discounts and restaurant trust.</p>
+            <p class="mb-0"><strong>Tips to improve:</strong> Complete orders on time, avoid cancellations, maintain good behavior.</p>
+        </div>
+        {% elif session.credit_score >= 90 %}
+        <div class="alert alert-success mb-4">
+            <h5><i class="fas fa-crown"></i> Premium Member</h5>
+            <p class="mb-0">You're a Trusted customer! Enjoy maximum discounts and priority service.</p>
+        </div>
+        {% endif %}
+        
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.total_orders or 0 }}</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.completed_orders or 0 }}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.cancelled_orders or 0 }}</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ discount }}%</div>
+                    <div class="stat-label">Current Discount</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Orders -->
+        <div class="dashboard-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-history"></i> Recent Orders</h5>
+                <a href="/customer/orders" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
+            {% if orders and orders|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Restaurant</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><strong>#{{ order.order_number }}</strong></td>
+                            <td>
+                                {{ order.restaurant_name }}
+                                {% if order.trust_badge %}
+                                <span class="badge badge-success ml-1">✓</span>
+                                {% endif %}
+                            </td>
+                            <td>₹{{ order.final_amount }}</td>
+                            <td>
+                                <span class="order-status status-{{ order.status }}">
+                                    {{ order.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status in ['pending', 'accepted'] %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="cancelOrder({{ order.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-bag fa-3x text-muted mb-3"></i>
+                <h5>No Orders Yet</h5>
+                <p class="text-muted">Start ordering to build your credit history!</p>
+                <button class="btn btn-primary" onclick="startOrdering()">
+                    <i class="fas fa-utensils"></i> Start Ordering
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        
+
+
+
+        <!-- Add this to your dashboard.html after the recent orders section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-store me-2"></i>Browse Restaurants</h5>
+    </div>
+    <div class="card-body">
+        <p>Browse restaurants and order your favorite food with credit-based discounts.</p>
+        <a href="{{ url_for('customer_restaurants') }}" class="btn btn-primary">
+            <i class="fas fa-store me-1"></i>View All Restaurants
+        </a>
+    </div>
+</div>
+
+
+        <!-- Restaurants -->
+        <div class="dashboard-card">
+            <h5 class="mb-3"><i class="fas fa-store"></i> Popular Restaurants</h5>
+            <div class="row" id="restaurantsContainer">
+                <!-- Restaurants will be loaded via JavaScript -->
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading restaurants...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notifications -->
+        {% if notifications and notifications|length > 0 %}
+        <div class="dashboard-card mt-4">
+            <h5><i class="fas fa-bell"></i> Notifications</h5>
+            <div id="notificationsContainer">
+                {% for notification in notifications %}
+                <div class="notification-item notification-{{ notification.type }}">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ notification.title }}</strong>
+                        <small>{{ notification.created_at.strftime('%H:%M') }}</small>
+                    </div>
+                    <p class="mb-0">{{ notification.message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Menu Modal -->
+<div class="modal fade" id="menuModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Menu</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="menuModalContent">
+                <!-- Menu content loaded via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" 
+                        data-toggle="modal" data-target="#cartModal">
+                    <i class="fas fa-shopping-cart"></i> View Cart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cart Modal -->
+<div class="modal fade" id="cartModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shopping-cart"></i> Your Cart
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="cartItems">
+                    <!-- Cart items loaded via JavaScript -->
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="cartSubtotal">₹0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Delivery Fee:</span>
+                        <span id="cartDelivery">₹30</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Discount ({{ discount }}%):</span>
+                        <span class="text-success" id="cartDiscount">-₹0</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between font-weight-bold">
+                        <span>Total:</span>
+                        <span id="cartTotal">₹0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Continue Shopping</button>
+                <button type="button" class="btn btn-primary" onclick="showCheckoutModal()">
+                    <i class="fas fa-check"></i> Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Checkout
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="deliveryAddress">Delivery Address *</label>
+                    <textarea class="form-control" id="deliveryAddress" rows="3" 
+                              placeholder="Enter your delivery address" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Payment Method *</label>
+                    <div class="payment-methods">
+                        <div class="custom-control custom-radio mb-2">
+                            <input type="radio" id="card" name="paymentMethod" value="card" 
+                                   class="custom-control-input" checked>
+                            <label class="custom-control-label" for="card">
+                                <i class="fas fa-credit-card"></i> Credit/Debit Card
+                            </label>
+                        </div>
+                        <div class="custom-control custom-radio mb-2">
+                            <input type="radio" id="wallet" name="paymentMethod" value="wallet" 
+                                   class="custom-control-input">
+                            <label class="custom-control-label" for="wallet">
+                                <i class="fas fa-wallet"></i> Wallet
+                            </label>
+                        </div>
+                        <div class="custom-control custom-radio">
+                            <input type="radio" id="netbanking" name="paymentMethod" value="netbanking" 
+                                   class="custom-control-input">
+                            <label class="custom-control-label" for="netbanking">
+                                <i class="fas fa-university"></i> Net Banking
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Discount Applied:</strong> You're getting {{ discount }}% off due to your credit score of {{ session.credit_score }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="placeOrder()">
+                    <i class="fas fa-check"></i> Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load restaurants on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        searchRestaurants();
+    });
+    
+    function filterByCuisine(cuisine) {
+        // Update active button
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Search with filter
+        const searchInput = document.getElementById('searchInput').value;
+        const minRating = document.getElementById('ratingFilter').value;
+        
+        let url = `/api/search_restaurants?q=${encodeURIComponent(searchInput)}&min_rating=${minRating}`;
+        if (cuisine) {
+            url += `&cuisine=${encodeURIComponent(cuisine)}`;
+        }
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => displayRestaurants(data.restaurants));
+    }
+    
+    function showCheckoutModal() {
+        if (cart.length === 0) {
+            showNotification('Cart Empty', 'Please add items to cart first', 'warning');
+            return;
+        }
+        $('#cartModal').modal('hide');
+        $('#checkoutModal').modal('show');
+    }
+    
+    function startOrdering() {
+        // Scroll to search bar
+        document.getElementById('searchInput').focus();
+    }
+</script>
+{% endblock %}

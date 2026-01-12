@@ -1,0 +1,519 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="dashboard-card mb-4">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-star fa-3x text-warning"></i>
+                </div>
+                <h5>Customer Feedback</h5>
+                <p class="text-muted">{{ restaurant.name }}</p>
+            </div>
+            
+            <hr>
+            
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link" href="{{ url_for('restaurant_dashboard') }}">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/restaurant/orders">
+                    <i class="fas fa-shopping-bag mr-2"></i> Orders
+                </a>
+                <a class="nav-link" href="/restaurant/menu">
+                    <i class="fas fa-utensils mr-2"></i> Menu
+                </a>
+                <a class="nav-link active" href="/restaurant/feedback">
+                    <i class="fas fa-star mr-2"></i> Feedback
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h6><i class="fas fa-chart-line"></i> Feedback Stats</h6>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Avg. Rating:</span>
+                    <strong id="avgRating">0.0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Feedback:</span>
+                    <strong id="totalFeedback">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>This Month:</span>
+                    <strong id="monthlyFeedback">0</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Response Rate:</span>
+                    <strong id="responseRate">0%</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="dashboard-card mb-4">
+            <h4><i class="fas fa-star"></i> Customer Ratings & Feedback</h4>
+            <p class="text-muted">Rate customers based on their behavior to help maintain a healthy ecosystem.</p>
+            <hr>
+            
+            <!-- Rating Criteria -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-comment-alt fa-2x text-primary mb-3"></i>
+                        <h6>Politeness</h6>
+                        <p class="small text-muted">Customer communication and behavior</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-clock fa-2x text-success mb-3"></i>
+                        <h6>Punctuality</h6>
+                        <p class="small text-muted">Order pickup/delivery timing</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-check-circle fa-2x text-warning mb-3"></i>
+                        <h6>Authenticity</h6>
+                        <p class="small text-muted">Order accuracy and legitimacy</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pending Feedback -->
+            <div class="mb-4">
+                <h5><i class="fas fa-clock text-warning"></i> Pending Feedback</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Credit Score</th>
+                                <th>Order Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingFeedback">
+                            <!-- Pending feedback loaded via JavaScript -->
+                            <tr>
+                                <td colspan="5" class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="sr-only">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Feedback History -->
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="fas fa-history"></i> Feedback History</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary btn-sm active" 
+                                onclick="filterFeedback('all')">All</button>
+                        <button class="btn btn-outline-primary btn-sm" 
+                                onclick="filterFeedback('positive')">Positive</button>
+                        <button class="btn btn-outline-primary btn-sm" 
+                                onclick="filterFeedback('negative')">Negative</button>
+                    </div>
+                </div>
+                
+                <div id="feedbackHistory">
+                    <!-- Feedback history loaded via JavaScript -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Impact Information -->
+        <div class="dashboard-card">
+            <h5><i class="fas fa-info-circle text-info"></i> How Feedback Affects Credit Scores</h5>
+            <hr>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-thumbs-up"></i> Positive Impact (+5 to +10 points)</h6>
+                        <ul class="mb-0 small">
+                            <li>Polite and respectful behavior</li>
+                            <li>Punctual pickup/delivery</li>
+                            <li>Accurate order information</li>
+                            <li>Reasonable special requests</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-thumbs-down"></i> Negative Impact (-5 to -20 points)</h6>
+                        <ul class="mb-0 small">
+                            <li>Rude or abusive behavior</li>
+                            <li>Frequent late pickups</li>
+                            <li>Suspected fake orders</li>
+                            <li>Excessive cancellations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <h6><i class="fas fa-lightbulb"></i> Best Practices</h6>
+                <ul class="mb-0">
+                    <li>Provide feedback within 24 hours of order completion</li>
+                    <li>Be fair and objective in your ratings</li>
+                    <li>Include specific comments when rating low</li>
+                    <li>Report serious issues to platform admin</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rate Customer - Order #<span id="modalOrderNumber"></span></h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="feedbackModalContent">
+                <!-- Feedback form loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPendingFeedback();
+        loadFeedbackHistory();
+        loadFeedbackStats();
+    });
+    
+    function loadPendingFeedback() {
+        fetch('/api/pending_feedback')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderPendingFeedback(data.orders);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('pendingFeedback').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-danger">
+                            Error loading pending feedback
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+    
+    function renderPendingFeedback(orders) {
+        const tbody = document.getElementById('pendingFeedback');
+        
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-4">
+                        <i class="fas fa-check-circle fa-2x text-muted mb-3"></i>
+                        <h6>No Pending Feedback</h6>
+                        <p class="text-muted">All orders have been rated.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        orders.forEach(order => {
+            const orderDate = new Date(order.created_at);
+            
+            html += `
+                <tr>
+                    <td><strong>#${order.order_number}</strong></td>
+                    <td>
+                        <div>${order.customer_name}</div>
+                        <small class="text-muted">Score: ${order.credit_score}</small>
+                    </td>
+                    <td>
+                        <div class="credit-badge credit-${order.credit_status}">
+                            ${order.credit_score}
+                        </div>
+                    </td>
+                    <td>${orderDate.toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" 
+                                onclick="openFeedbackModal(${order.id}, '${order.order_number}')">
+                            <i class="fas fa-star"></i> Rate Now
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    function loadFeedbackHistory() {
+        fetch('/api/feedback_history')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderFeedbackHistory(data.feedback);
+                }
+            });
+    }
+    
+    function renderFeedbackHistory(feedbackList) {
+        const container = document.getElementById('feedbackHistory');
+        
+        if (!feedbackList || feedbackList.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-star fa-2x text-muted mb-3"></i>
+                    <h6>No Feedback Given</h6>
+                    <p class="text-muted">Start rating customers to build feedback history.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="row">';
+        feedbackList.forEach(feedback => {
+            const feedbackDate = new Date(feedback.created_at);
+            const overallRating = feedback.overall_rating || 
+                                 (feedback.politeness_rating + feedback.pickup_punctuality + feedback.order_authenticity) / 3;
+            
+            const ratingClass = overallRating >= 4 ? 'border-success' : 
+                               overallRating >= 3 ? 'border-warning' : 'border-danger';
+            
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 ${ratingClass}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">Order #${feedback.order_number}</h6>
+                                    <p class="mb-1 small">${feedback.customer_name}</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="star-rating small">
+                                        ${'★'.repeat(Math.floor(overallRating))}
+                                        ${overallRating % 1 >= 0.5 ? '½' : ''}
+                                        ${'☆'.repeat(5 - Math.ceil(overallRating))}
+                                    </div>
+                                    <small class="text-muted">${feedbackDate.toLocaleDateString()}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <small class="text-muted">Politeness</small>
+                                    <div class="font-weight-bold">${feedback.politeness_rating}/5</div>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Punctuality</small>
+                                    <div class="font-weight-bold">${feedback.pickup_punctuality}/5</div>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Authenticity</small>
+                                    <div class="font-weight-bold">${feedback.order_authenticity}/5</div>
+                                </div>
+                            </div>
+                            
+                            ${feedback.comments ? `
+                            <div class="mt-2">
+                                <small class="text-muted">Comments:</small>
+                                <p class="mb-0 small">${feedback.comments}</p>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    Credit Impact: 
+                                    <span class="${feedback.credit_change > 0 ? 'text-success' : 'text-danger'}">
+                                        ${feedback.credit_change > 0 ? '+' : ''}${feedback.credit_change} points
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    }
+    
+    function loadFeedbackStats() {
+        fetch('/api/feedback_stats')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('avgRating').textContent = 
+                        data.average_rating ? data.average_rating.toFixed(1) : '0.0';
+                    document.getElementById('totalFeedback').textContent = data.total_feedback;
+                    document.getElementById('monthlyFeedback').textContent = data.monthly_feedback;
+                    document.getElementById('responseRate').textContent = data.response_rate + '%';
+                }
+            });
+    }
+    
+    function openFeedbackModal(orderId, orderNumber) {
+        document.getElementById('modalOrderNumber').textContent = orderNumber;
+        
+        const html = `
+            <form onsubmit="submitFeedback(${orderId}); return false;">
+                <div class="form-group">
+                    <label>Politeness (1-5)</label>
+                    <div class="star-rating">
+                        ${[1,2,3,4,5].map(i => `
+                            <input type="radio" id="politeness${i}" name="politeness" value="${i}" required>
+                            <label for="politeness${i}">★</label>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Pickup Punctuality (1-5)</label>
+                    <div class="star-rating">
+                        ${[1,2,3,4,5].map(i => `
+                            <input type="radio" id="punctuality${i}" name="punctuality" value="${i}" required>
+                            <label for="punctuality${i}">★</label>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Order Authenticity (1-5)</label>
+                    <div class="star-rating">
+                        ${[1,2,3,4,5].map(i => `
+                            <input type="radio" id="authenticity${i}" name="authenticity" value="${i}" required>
+                            <label for="authenticity${i}">★</label>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Comments (optional)</label>
+                    <textarea class="form-control" name="comments" rows="2" 
+                              placeholder="Any specific feedback about the customer..."></textarea>
+                </div>
+                
+                <div class="alert alert-info small">
+                    <i class="fas fa-info-circle"></i>
+                    This feedback will affect the customer's credit score.
+                    Be fair and objective in your assessment.
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Submit Feedback
+                    </button>
+                </div>
+            </form>
+        `;
+        
+        document.getElementById('feedbackModalContent').innerHTML = html;
+        $('#feedbackModal').modal('show');
+    }
+    
+    function submitFeedback(orderId) {
+        const form = event.target;
+        const politeness = form.querySelector('input[name="politeness"]:checked')?.value;
+        const punctuality = form.querySelector('input[name="punctuality"]:checked')?.value;
+        const authenticity = form.querySelector('input[name="authenticity"]:checked')?.value;
+        const comments = form.querySelector('textarea[name="comments"]').value;
+        
+        if (!politeness || !punctuality || !authenticity) {
+            showNotification('Error', 'Please provide all ratings', 'error');
+            return;
+        }
+        
+        fetch('/api/submit_customer_feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                politeness: parseInt(politeness),
+                punctuality: parseInt(punctuality),
+                authenticity: parseInt(authenticity),
+                comments: comments
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 'Feedback submitted successfully', 'success');
+                $('#feedbackModal').modal('hide');
+                loadPendingFeedback();
+                loadFeedbackHistory();
+                loadFeedbackStats();
+            } else {
+                showNotification('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error', 'Unable to submit feedback', 'error');
+        });
+    }
+    
+    function filterFeedback(type) {
+        // Update active button
+        document.querySelectorAll('#feedbackHistory + .btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // In a real app, this would filter the feedback list
+        // For now, just reload all feedback
+        loadFeedbackHistory();
+    }
+</script>
+
+<style>
+.star-rating {
+    direction: rtl;
+    display: inline-block;
+}
+.star-rating input {
+    display: none;
+}
+.star-rating label {
+    color: #ddd;
+    font-size: 20px;
+    padding: 0 2px;
+    cursor: pointer;
+}
+.star-rating input:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+    color: #ffd700;
+}
+.star-rating.small label {
+    font-size: 16px;
+}
+</style>
+{% endblock %}

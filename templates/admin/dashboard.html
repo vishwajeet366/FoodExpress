@@ -1,0 +1,475 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="dashboard-card mb-4">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-cog fa-3x text-primary"></i>
+                </div>
+                <h5>Admin Panel</h5>
+                <p class="text-muted">Platform Control Center</p>
+            </div>
+            
+            <hr>
+            
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link active" href="{{ url_for('admin_dashboard') }}">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/admin/users">
+                    <i class="fas fa-users mr-2"></i> User Management
+                </a>
+                <a class="nav-link" href="/admin/restaurants">
+                    <i class="fas fa-store mr-2"></i> Restaurants
+                </a>
+                <a class="nav-link" href="/admin/orders">
+                    <i class="fas fa-shopping-bag mr-2"></i> Orders
+                </a>
+                <a class="nav-link" href="/admin/analytics">
+                    <i class="fas fa-chart-line mr-2"></i> Analytics
+                </a>
+                <a class="nav-link" href="/admin/settings">
+                    <i class="fas fa-cogs mr-2"></i> Settings
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            <div class="mt-3">
+                <button class="btn btn-primary btn-block mb-2" onclick="addNewUser()">
+                    <i class="fas fa-user-plus"></i> Add User
+                </button>
+                <button class="btn btn-success btn-block mb-2" onclick="verifyRestaurant()">
+                    <i class="fas fa-check-circle"></i> Verify Restaurant
+                </button>
+                <button class="btn btn-warning btn-block mb-2" onclick="viewReports()">
+                    <i class="fas fa-flag"></i> View Reports
+                </button>
+                <button class="btn btn-danger btn-block" onclick="systemMaintenance()">
+                    <i class="fas fa-tools"></i> Maintenance
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.total_customers or 0 }}</div>
+                    <div class="stat-label">Total Customers</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.total_restaurants or 0 }}</div>
+                    <div class="stat-label">Restaurants</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">{{ stats.today_orders or 0 }}</div>
+                    <div class="stat-label">Today's Orders</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number">₹{{ stats.today_revenue or 0 }}</div>
+                    <div class="stat-label">Today's Revenue</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Credit Score Distribution -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="dashboard-card h-100">
+                    <h5><i class="fas fa-user-shield"></i> Trusted Users</h5>
+                    <div class="text-center py-4">
+                        <h1 class="display-4 text-success">{{ stats.trusted_users or 0 }}</h1>
+                        <p class="text-muted">Score: 90-100</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dashboard-card h-100">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Risky Users</h5>
+                    <div class="text-center py-4">
+                        <h1 class="display-4 text-warning">{{ stats.risky_users or 0 }}</h1>
+                        <p class="text-muted">Score: 30-49</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dashboard-card h-100">
+                    <h5><i class="fas fa-ban"></i> Blocked Users</h5>
+                    <div class="text-center py-4">
+                        <h1 class="display-4 text-danger">{{ stats.blocked_users or 0 }}</h1>
+                        <p class="text-muted">Score: 0-29</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Orders -->
+        <div class="dashboard-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-history"></i> Recent Orders</h5>
+                <a href="/admin/orders" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            
+            {% if orders and orders|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Restaurant</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Credit Score</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><strong>#{{ order.order_number }}</strong></td>
+                            <td>{{ order.customer_name }}</td>
+                            <td>{{ order.restaurant_name }}</td>
+                            <td>₹{{ order.final_amount }}</td>
+                            <td>
+                                <span class="order-status status-{{ order.status }}">
+                                    {{ order.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="credit-badge credit-{{ order.credit_status }}">
+                                    {{ order.credit_score }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" 
+                                            onclick="viewOrderDetails({{ order.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" 
+                                            onclick="editOrder({{ order.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-shopping-bag fa-2x text-muted mb-3"></i>
+                <h6>No Recent Orders</h6>
+                <p class="text-muted">No orders placed yet.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- User Management -->
+        <div class="dashboard-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-users"></i> User Management</h5>
+                <a href="/admin/users" class="btn btn-sm btn-primary">Manage Users</a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover user-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Credit Score</th>
+                            <th>Status</th>
+                            <th>Orders</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="user-row {{ user.credit_status }}">
+                            <td>
+                                <div>{{ user.name }}</div>
+                                <small class="text-muted">ID: {{ user.id }}</small>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="badge 
+                                    {{ 'badge-primary' if user.role == 'customer' else 
+                                       'badge-success' if user.role == 'restaurant' else 
+                                       'badge-warning' if user.role == 'delivery' else 
+                                       'badge-dark' }}">
+                                    {{ user.role|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="credit-badge credit-{{ user.credit_status }}">
+                                    {{ user.credit_score }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge badge-success">Active</span>
+                                {% else %}
+                                <span class="badge badge-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ user.total_orders or 0 }}</div>
+                                <small class="text-danger">{{ user.cancelled_orders or 0 }} cancelled</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" 
+                                            onclick="viewUserProfile({{ user.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" 
+                                            data-toggle="modal" 
+                                            data-target="#creditModal{{ user.id }}">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editUser({{ user.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Credit Score Modal for each user -->
+                        <div class="modal fade" id="creditModal{{ user.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Update Credit Score</h5>
+                                        <button type="button" class="close" data-dismiss="modal">
+                                            <span>&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label>Current Score: {{ user.credit_score }}</label>
+                                            <input type="number" class="form-control" 
+                                                   id="score{{ user.id }}" min="0" max="100" 
+                                                   value="{{ user.credit_score }}">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Reason for Change</label>
+                                            <textarea class="form-control" 
+                                                      id="reason{{ user.id }}" 
+                                                      rows="2" 
+                                                      placeholder="Explain the reason for credit score adjustment"></textarea>
+                                        </div>
+                                        <div class="alert alert-info small">
+                                            <i class="fas fa-info-circle"></i>
+                                            This will immediately affect user's discounts and permissions.
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" 
+                                                data-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" 
+                                                onclick="updateCreditScore({{ user.id }})">
+                                            Update Score
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <span class="text-muted">
+                        Showing {{ users|length }} users
+                    </span>
+                </div>
+                <a href="/admin/users" class="btn btn-outline-primary">
+                    View All Users
+                </a>
+            </div>
+        </div>
+        
+        <!-- Platform Revenue -->
+        <div class="dashboard-card mt-4">
+            <h5><i class="fas fa-money-bill-wave"></i> Platform Revenue</h5>
+            <hr>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-primary">₹{{ stats.total_commission or 0 }}</h4>
+                        <p class="small text-muted">Commission</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-success">₹{{ stats.total_delivery_fees or 0 }}</h4>
+                        <p class="small text-muted">Delivery Fees</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-warning">₹{{ stats.total_discounts or 0 }}</h4>
+                        <p class="small text-muted">Discount Cost</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-info">₹{{ (stats.total_commission|default(0) + stats.total_delivery_fees|default(0)) - stats.total_discounts|default(0) }}</h4>
+                        <p class="small text-muted">Net Revenue</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Alert Modal -->
+<div class="modal fade" id="systemAlertModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-white">
+                    <i class="fas fa-exclamation-triangle"></i> System Alert
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span class="text-white">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="systemAlertContent">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateCreditScore(userId) {
+        const newScore = document.getElementById(`score${userId}`).value;
+        const reason = document.getElementById(`reason${userId}`).value;
+        
+        if (!newScore || newScore < 0 || newScore > 100) {
+            showNotification('Error', 'Please enter a valid score between 0-100', 'error');
+            return;
+        }
+        
+        if (!reason) {
+            showNotification('Error', 'Please provide a reason for the score change', 'error');
+            return;
+        }
+        
+        fetch('/api/admin/update_credit_score', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                score: parseInt(newScore),
+                reason: reason
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 'Credit score updated successfully', 'success');
+                $(`#creditModal${userId}`).modal('hide');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error', data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error', 'Unable to update credit score', 'error');
+        });
+    }
+    
+    function viewUserProfile(userId) {
+        // In a real app, navigate to user profile page
+        window.location.href = `/admin/user/${userId}`;
+    }
+    
+    function editUser(userId) {
+        // In a real app, open user edit modal
+        showNotification('Info', 'Edit user feature coming soon!', 'info');
+    }
+    
+    function viewOrderDetails(orderId) {
+        // In a real app, open order details modal
+        showNotification('Info', 'View order details feature coming soon!', 'info');
+    }
+    
+    function editOrder(orderId) {
+        // In a real app, open order edit modal
+        showNotification('Info', 'Edit order feature coming soon!', 'info');
+    }
+    
+    function addNewUser() {
+        window.location.href = '/admin/users/add';
+    }
+    
+    function verifyRestaurant() {
+        showNotification('Info', 'Restaurant verification feature coming soon!', 'info');
+    }
+    
+    function viewReports() {
+        window.location.href = '/admin/reports';
+    }
+    
+    function systemMaintenance() {
+        document.getElementById('systemAlertContent').innerHTML = `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> Maintenance Mode</h6>
+                <p>Enabling maintenance mode will:</p>
+                <ul class="small">
+                    <li>Disable new orders</li>
+                    <li>Show maintenance message to users</li>
+                    <li>Allow admin operations only</li>
+                </ul>
+            </div>
+            <div class="form-group">
+                <label>Maintenance Message</label>
+                <textarea class="form-control" rows="3" 
+                          placeholder="Explain why the system is under maintenance..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Duration (hours)</label>
+                <input type="number" class="form-control" value="1" min="0.5" step="0.5">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="enableMaintenance()">
+                    <i class="fas fa-tools"></i> Enable Maintenance
+                </button>
+            </div>
+        `;
+        $('#systemAlertModal').modal('show');
+    }
+    
+    function enableMaintenance() {
+        showNotification('Success', 'Maintenance mode enabled', 'success');
+        $('#systemAlertModal').modal('hide');
+    }
+</script>
+{% endblock %}

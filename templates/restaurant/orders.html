@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Food Delivery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .order-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .order-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .order-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            border-radius: 10px 10px 0 0;
+        }
+        .order-body {
+            padding: 20px;
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-accepted { background: #d1ecf1; color: #0c5460; }
+        .status-preparing { background: #d1ecf1; color: #0c5460; }
+        .status-ready { background: #d4edda; color: #155724; }
+        .status-out_for_delivery { background: #cce5ff; color: #004085; }
+        .status-delivered { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        
+        .payment-badge {
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        .payment-cod { background: #ffc107; color: #212529; }
+        .payment-card { background: #28a745; color: white; }
+        .payment-wallet { background: #17a2b8; color: white; }
+        .payment-netbanking { background: #6f42c1; color: white; }
+        
+        .item-list {
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .item-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .item-row:last-child {
+            border-bottom: none;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .filter-buttons {
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('customer_dashboard') }}">
+                <i class="fas fa-utensils me-2"></i>Food Delivery
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer_restaurants') }}">
+                            <i class="fas fa-store me-1"></i>Restaurants
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('customer_orders') }}">
+                            <i class="fas fa-list-alt me-1"></i>My Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('customer_profile') }}">
+                            <i class="fas fa-user me-1"></i>Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1><i class="fas fa-list-alt me-2"></i>My Orders</h1>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            Total Orders: <span class="badge bg-info">{{ user.total_orders or 0 }}</span>
+                            | Completed: <span class="badge bg-success">{{ user.completed_orders or 0 }}</span>
+                            | Cancelled: <span class="badge bg-danger">{{ user.cancelled_orders or 0 }}</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="mb-0">{{ user.total_orders or 0 }}</h2>
+                        <p class="text-muted mb-0">Total Orders</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="mb-0">{{ user.completed_orders or 0 }}</h2>
+                        <p class="text-muted mb-0">Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="mb-0">{{ user.cancelled_orders or 0 }}</h2>
+                        <p class="text-muted mb-0">Cancelled</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="mb-0">{{ discount }}%</h2>
+                        <p class="text-muted mb-0">Current Discount</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="filter-buttons">
+            <button class="btn btn-outline-primary filter-btn active" data-filter="all">All Orders</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="pending">Pending</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="accepted">Accepted</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="preparing">Preparing</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="delivered">Delivered</button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="cancelled">Cancelled</button>
+        </div>
+
+        <!-- Orders List -->
+        <div id="ordersContainer">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="order-card" data-status="{{ order.status }}">
+                    <div class="order-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-shopping-bag me-2"></i>Order #{{ order.order_number }}
+                                </h5>
+                                <small class="text-muted">
+                                    <i class="far fa-clock me-1"></i>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-md-end">
+                                <span class="status-badge status-{{ order.status }}">
+                                    {{ order.status|replace('_', ' ')|title }}
+                                </span>
+                                <span class="payment-badge payment-{{ order.payment_method }}">
+                                    {{ order.payment_method|upper }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6>
+                                    <i class="fas fa-store me-2"></i>{{ order.restaurant_name }}
+                                    {% if order.trust_badge %}
+                                    <span class="badge bg-success ms-2">Trusted</span>
+                                    {% endif %}
+                                </h6>
+                                
+                                <p class="mb-2">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    {{ order.delivery_address }}
+                                </p>
+                                
+                                <div class="item-list mt-3">
+                                    <h6>Order Items ({{ order.item_count }})</h6>
+                                    <div class="item-names text-muted">
+                                        {{ order.item_names }}
+                                    </div>
+                                </div>
+                                
+                                <div class="action-buttons">
+                                    {% if order.status in ['pending', 'accepted', 'preparing'] %}
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            onclick="cancelOrder({{ order.id }})">
+                                        <i class="fas fa-times me-1"></i>Cancel Order
+                                    </button>
+                                    {% endif %}
+                                    
+                                    {% if order.status == 'delivered' %}
+                                    <button class="btn btn-outline-success btn-sm" 
+                                            onclick="rateOrder({{ order.id }})">
+                                        <i class="fas fa-star me-1"></i>Rate Order
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <button class="btn btn-outline-info btn-sm" 
+                                            onclick="viewOrderDetails({{ order.id }})">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Order Summary</h6>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Items Total:</span>
+                                            <span>₹{{ "%.2f"|format(order.total_amount) }}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Delivery Fee:</span>
+                                            <span>₹{{ "%.2f"|format(order.delivery_fee) }}</span>
+                                        </div>
+                                        {% if order.discount_amount > 0 %}
+                                        <div class="d-flex justify-content-between mb-2 text-success">
+                                            <span>Discount:</span>
+                                            <span>-₹{{ "%.2f"|format(order.discount_amount) }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <hr>
+                                        <div class="d-flex justify-content-between fw-bold">
+                                            <span>Total Amount:</span>
+                                            <span>₹{{ "%.2f"|format(order.final_amount) }}</span>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                {% if order.payment_method == 'cod' %}
+                                                Pay on delivery
+                                                {% else %}
+                                                Paid via {{ order.payment_method }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-bag fa-4x text-muted mb-4"></i>
+                <h3>No Orders Yet</h3>
+                <p class="text-muted mb-4">You haven't placed any orders yet. Start ordering now!</p>
+                <a href="{{ url_for('customer_restaurants') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-utensils me-2"></i>Browse Restaurants
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white mt-5 py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-utensils me-2"></i>Food Delivery</h5>
+                    <p class="mb-0">Order food from your favorite restaurants with credit-based discounts.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">&copy; 2024 Food Delivery System. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="orderDetailsContent">
+                    <!-- Content loaded via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Order Modal -->
+    <div class="modal fade" id="cancelOrderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cancel Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this order?</p>
+                    <div class="form-group">
+                        <label for="cancelReason">Reason for cancellation:</label>
+                        <textarea class="form-control" id="cancelReason" rows="3" 
+                                  placeholder="Please provide a reason for cancellation"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Order</button>
+                    <button type="button" class="btn btn-danger" id="confirmCancelBtn">Yes, Cancel Order</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Order filtering
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active button
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Filter orders
+                const filter = this.dataset.filter;
+                const orderCards = document.querySelectorAll('.order-card');
+                
+                orderCards.forEach(card => {
+                    if (filter === 'all' || card.dataset.status === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Cancel order function
+        let currentOrderId = null;
+        
+        function cancelOrder(orderId) {
+            currentOrderId = orderId;
+            const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            modal.show();
+        }
+        
+        // Confirm cancellation
+        document.getElementById('confirmCancelBtn').addEventListener('click', function() {
+            const reason = document.getElementById('cancelReason').value;
+            
+            if (!reason.trim()) {
+                alert('Please provide a reason for cancellation');
+                return;
+            }
+            
+            fetch('/api/cancel_order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order_id: currentOrderId,
+                    reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showAlert('error', data.message);
+                }
+                bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('error', 'Failed to cancel order');
+            });
+        });
+        
+        // View order details
+        function viewOrderDetails(orderId) {
+            fetch(`/api/get_order_details/${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+                        const content = document.getElementById('orderDetailsContent');
+                        
+                        let itemsHtml = '';
+                        if (data.items && data.items.length > 0) {
+                            itemsHtml = `
+                                <h6>Order Items</h6>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Quantity</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                            
+                            data.items.forEach(item => {
+                                itemsHtml += `
+                                    <tr>
+                                        <td>${item.name}</td>
+                                        <td>${item.quantity}</td>
+                                        <td>₹${item.price.toFixed(2)}</td>
+                                        <td>₹${(item.price * item.quantity).toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            });
+                            
+                            itemsHtml += `
+                                    </tbody>
+                                </table>
+                            `;
+                        }
+                        
+                        content.innerHTML = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Order Information</h6>
+                                    <p><strong>Order #:</strong> ${data.order.order_number}</p>
+                                    <p><strong>Restaurant:</strong> ${data.order.restaurant_name}</p>
+                                    <p><strong>Status:</strong> <span class="status-badge status-${data.order.status}">
+                                        ${data.order.status.replace('_', ' ')}
+                                    </span></p>
+                                    <p><strong>Payment Method:</strong> ${data.order.payment_method.toUpperCase()}</p>
+                                    <p><strong>Payment Status:</strong> ${data.order.payment_status}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Delivery Information</h6>
+                                    <p><strong>Address:</strong> ${data.order.delivery_address}</p>
+                                    <p><strong>Placed On:</strong> ${new Date(data.order.created_at).toLocaleString()}</p>
+                                    ${data.order.updated_at ? `<p><strong>Last Updated:</strong> ${new Date(data.order.updated_at).toLocaleString()}</p>` : ''}
+                                </div>
+                            </div>
+                            ${itemsHtml}
+                        `;
+                        
+                        modal.show();
+                    } else {
+                        showAlert('error', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('error', 'Failed to load order details');
+                });
+        }
+        
+        // Rate order (placeholder function)
+        function rateOrder(orderId) {
+            alert('Rating feature coming soon!');
+        }
+        
+        // Show alert function
+        function showAlert(type, message) {
+            const alertClass = type === 'error' ? 'danger' : type;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alertClass} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+            alertDiv.style.zIndex = '1050';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        // Flash messages handling
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    showAlert('{{ category }}', '{{ message }}');
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </script>
+</body>
+</html>

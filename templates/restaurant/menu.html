@@ -1,0 +1,689 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+<!-- Add this at the top of your restaurant/menu.html -->
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    Menu items added here will be visible to customers for ordering.
+    Make sure to mark items as "available" for customers to see them.
+</div>
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="dashboard-card mb-4">
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-utensils fa-3x text-primary"></i>
+                </div>
+                <h5>Menu Management</h5>
+                <p class="text-muted">{{ restaurant.name }}</p>
+            </div>
+            
+            <hr>
+            
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link" href="{{ url_for('restaurant_dashboard') }}">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                </a>
+                <a class="nav-link" href="/restaurant/orders">
+                    <i class="fas fa-shopping-bag mr-2"></i> Orders
+                </a>
+                <a class="nav-link active" href="/restaurant/menu">
+                    <i class="fas fa-utensils mr-2"></i> Menu
+                </a>
+                <a class="nav-link" href="/restaurant/feedback">
+                    <i class="fas fa-star mr-2"></i> Feedback
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <h6><i class="fas fa-chart-pie"></i> Menu Statistics</h6>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Items:</span>
+                    <strong id="totalItems">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Available:</span>
+                    <strong class="text-success" id="availableItems">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Out of Stock:</span>
+                    <strong class="text-danger" id="outOfStockItems">0</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Categories:</span>
+                    <strong id="totalCategories">0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-9">
+        <div class="dashboard-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-utensils"></i> Menu Items</h4>
+                <div>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#addItemModal">
+                        <i class="fas fa-plus"></i> Add New Item
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="refreshMenu()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="btn-group flex-wrap" id="categoryFilter">
+                        <button class="btn btn-outline-primary active" onclick="filterByCategory('')">
+                            All Items
+                        </button>
+                        <!-- Categories loaded via JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchMenu" 
+                               placeholder="Search items..." onkeyup="searchItems()">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" onclick="searchItems()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Menu Items Grid -->
+            <div class="row" id="menuItemsContainer">
+                <!-- Menu items loaded via JavaScript -->
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading menu items...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bulk Actions -->
+        <div class="dashboard-card">
+            <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            <hr>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-tags fa-2x text-success mb-3"></i>
+                        <h6>Update Prices</h6>
+                        <p class="small text-muted">Bulk update item prices</p>
+                        <button class="btn btn-sm btn-outline-success" 
+                                onclick="showBulkPriceUpdate()">
+                            Update
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-ban fa-2x text-danger mb-3"></i>
+                        <h6>Mark Out of Stock</h6>
+                        <p class="small text-muted">Quickly mark items unavailable</p>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="showBulkStockUpdate()">
+                            Update
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3 border rounded">
+                        <i class="fas fa-file-export fa-2x text-info mb-3"></i>
+                        <h6>Export Menu</h6>
+                        <p class="small text-muted">Export menu as CSV/PDF</p>
+                        <button class="btn btn-sm btn-outline-info" onclick="exportMenu()">
+                            Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Menu Item</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addItemForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemName">Item Name *</label>
+                                <input type="text" class="form-control" id="itemName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="itemCategory">Category *</label>
+                                <select class="form-control" id="itemCategory" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Appetizers">Appetizers</option>
+                                    <option value="Main Course">Main Course</option>
+                                    <option value="Desserts">Desserts</option>
+                                    <option value="Beverages">Beverages</option>
+                                    <option value="Specials">Specials</option>
+                                    <option value="new">+ Add New Category</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemDescription">Description</label>
+                        <textarea class="form-control" id="itemDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="itemPrice">Price (₹) *</label>
+                                <input type="number" class="form-control" id="itemPrice" 
+                                       min="1" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="itemPrepTime">Prep Time (minutes)</label>
+                                <input type="number" class="form-control" id="itemPrepTime" 
+                                       min="1" value="15">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="itemAvailability">Availability</label>
+                                <select class="form-control" id="itemAvailability">
+                                    <option value="1">Available</option>
+                                    <option value="0">Out of Stock</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemImage">Image URL (optional)</label>
+                        <input type="url" class="form-control" id="itemImage" 
+                               placeholder="https://example.com/image.jpg">
+                        <small class="form-text text-muted">
+                            You can also upload image later
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Tags (optional)</label>
+                        <input type="text" class="form-control" id="itemTags" 
+                               placeholder="e.g., spicy, vegetarian, popular">
+                        <small class="form-text text-muted">
+                            Separate tags with commas
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addMenuItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Menu Item</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="editItemContent">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Price Update Modal -->
+<div class="modal fade" id="bulkPriceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Price Update</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Category</label>
+                    <select class="form-control" id="bulkCategory">
+                        <option value="">All Categories</option>
+                        <!-- Categories loaded via JavaScript -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Price Adjustment</label>
+                    <div class="input-group">
+                        <select class="form-control w-25" id="bulkAdjustmentType">
+                            <option value="percentage">Percentage</option>
+                            <option value="fixed">Fixed Amount</option>
+                        </select>
+                        <input type="number" class="form-control" id="bulkAdjustmentValue" 
+                               placeholder="Value" step="0.01">
+                        <div class="input-group-append">
+                            <span class="input-group-text" id="bulkAdjustmentSymbol">%</span>
+                        </div>
+                    </div>
+                    <small class="form-text text-muted">
+                        Enter positive number to increase, negative to decrease
+                    </small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    This will affect <span id="affectedItemsCount">0</span> items
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyBulkPriceUpdate()">
+                    Apply Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let menuItems = [];
+    let categories = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadMenuItems();
+    });
+    
+    function loadMenuItems() {
+        fetch('/api/get_menu/{{ restaurant.id }}')
+            .then(response => response.json())
+            .then(data => {
+                menuItems = data.menu || [];
+                renderMenuItems(menuItems);
+                updateStatistics(menuItems);
+                extractCategories(menuItems);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error', 'Unable to load menu items', 'error');
+            });
+    }
+    
+    function renderMenuItems(items) {
+        const container = document.getElementById('menuItemsContainer');
+        
+        if (!items || items.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <h5>No Menu Items</h5>
+                    <p class="text-muted">Add your first menu item to get started.</p>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#addItemModal">
+                        <i class="fas fa-plus"></i> Add First Item
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        items.forEach(item => {
+            html += `
+                <div class="col-md-4 mb-4" data-category="${item.category}" data-name="${item.name.toLowerCase()}">
+                    <div class="menu-item-card h-100">
+                        <div class="position-relative">
+                            ${item.image_url ? `
+                            <img src="${item.image_url}" class="card-img-top" alt="${item.name}" 
+                                 style="height: 150px; object-fit: cover;">
+                            ` : `
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                 style="height: 150px;">
+                                <i class="fas fa-utensils fa-3x text-muted"></i>
+                            </div>
+                            `}
+                            
+                            <div class="position-absolute top-0 right-0 m-2">
+                                <span class="badge ${item.is_available ? 'badge-success' : 'badge-danger'}">
+                                    ${item.is_available ? 'Available' : 'Out of Stock'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <h5 class="card-title">${item.name}</h5>
+                            <p class="card-text text-muted small">
+                                ${item.description ? item.description.substring(0, 80) + '...' : 'No description'}
+                            </p>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="text-primary mb-0">₹${item.price}</h4>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> ${item.prep_time} min
+                                    </small>
+                                </div>
+                                
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="editMenuItem(${item.id})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" 
+                                            onclick="toggleItemStatus(${item.id}, ${item.is_available})">
+                                        <i class="fas fa-toggle-${item.is_available ? 'on' : 'off'}"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteMenuItem(${item.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <span class="badge badge-secondary">${item.category}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function updateStatistics(items) {
+        const totalItems = items.length;
+        const availableItems = items.filter(item => item.is_available).length;
+        const outOfStockItems = totalItems - availableItems;
+        
+        // Get unique categories
+        const uniqueCategories = [...new Set(items.map(item => item.category))];
+        
+        document.getElementById('totalItems').textContent = totalItems;
+        document.getElementById('availableItems').textContent = availableItems;
+        document.getElementById('outOfStockItems').textContent = outOfStockItems;
+        document.getElementById('totalCategories').textContent = uniqueCategories.length;
+    }
+    
+    function extractCategories(items) {
+        categories = [...new Set(items.map(item => item.category))].filter(Boolean);
+        renderCategoryFilter();
+    }
+    
+    function renderCategoryFilter() {
+        const filterContainer = document.getElementById('categoryFilter');
+        let html = `
+            <button class="btn btn-outline-primary active" onclick="filterByCategory('')">
+                All Items
+            </button>
+        `;
+        
+        categories.forEach(category => {
+            html += `
+                <button class="btn btn-outline-primary" onclick="filterByCategory('${category}')">
+                    ${category}
+                </button>
+            `;
+        });
+        
+        filterContainer.innerHTML = html;
+    }
+    
+    function filterByCategory(category) {
+        // Update active button
+        document.querySelectorAll('#categoryFilter .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        let filteredItems = menuItems;
+        if (category) {
+            filteredItems = menuItems.filter(item => item.category === category);
+        }
+        
+        renderMenuItems(filteredItems);
+    }
+    
+    function searchItems() {
+        const searchTerm = document.getElementById('searchMenu').value.toLowerCase();
+        
+        let filteredItems = menuItems;
+        if (searchTerm) {
+            filteredItems = menuItems.filter(item => 
+                item.name.toLowerCase().includes(searchTerm) ||
+                (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+                item.category.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        renderMenuItems(filteredItems);
+    }
+    
+    function addMenuItem() {
+        const itemData = {
+            name: document.getElementById('itemName').value,
+            description: document.getElementById('itemDescription').value,
+            price: parseFloat(document.getElementById('itemPrice').value),
+            category: document.getElementById('itemCategory').value,
+            prep_time: parseInt(document.getElementById('itemPrepTime').value) || 15,
+            is_available: document.getElementById('itemAvailability').value === '1',
+            image_url: document.getElementById('itemImage').value || null,
+            tags: document.getElementById('itemTags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+        };
+        
+        // Check if adding new category
+        if (itemData.category === 'new') {
+            const newCategory = prompt('Enter new category name:');
+            if (!newCategory) {
+                showNotification('Error', 'Category name is required', 'error');
+                return;
+            }
+            itemData.category = newCategory;
+        }
+        
+        // In a real app, send to backend
+        fetch('/api/add_menu_item', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(itemData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 'Menu item added successfully', 'success');
+                $('#addItemModal').modal('hide');
+                loadMenuItems();
+            } else {
+                showNotification('Error', data.message, 'error');
+            }
+        });
+    }
+    
+    function editMenuItem(itemId) {
+        const item = menuItems.find(item => item.id === itemId);
+        if (!item) return;
+        
+        const html = `
+            <form onsubmit="updateMenuItem(${itemId}); return false;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Item Name</label>
+                            <input type="text" class="form-control" value="${item.name}" 
+                                   id="editName${itemId}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <input type="text" class="form-control" value="${item.category}" 
+                                   id="editCategory${itemId}" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" id="editDescription${itemId}" rows="2">${item.description || ''}</textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Price (₹)</label>
+                            <input type="number" class="form-control" value="${item.price}" 
+                                   id="editPrice${itemId}" min="1" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Prep Time (minutes)</label>
+                            <input type="number" class="form-control" value="${item.prep_time}" 
+                                   id="editPrepTime${itemId}" min="1">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Availability</label>
+                            <select class="form-control" id="editAvailability${itemId}">
+                                <option value="1" ${item.is_available ? 'selected' : ''}>Available</option>
+                                <option value="0" ${!item.is_available ? 'selected' : ''}>Out of Stock</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        `;
+        
+        document.getElementById('editItemContent').innerHTML = html;
+        $('#editItemModal').modal('show');
+    }
+    
+    function updateMenuItem(itemId) {
+        const itemData = {
+            name: document.getElementById(`editName${itemId}`).value,
+            category: document.getElementById(`editCategory${itemId}`).value,
+            description: document.getElementById(`editDescription${itemId}`).value,
+            price: parseFloat(document.getElementById(`editPrice${itemId}`).value),
+            prep_time: parseInt(document.getElementById(`editPrepTime${itemId}`).value) || 15,
+            is_available: document.getElementById(`editAvailability${itemId}`).value === '1'
+        };
+        
+        // In a real app, send to backend
+        showNotification('Success', 'Menu item updated successfully', 'success');
+        $('#editItemModal').modal('hide');
+        loadMenuItems();
+    }
+    
+    function toggleItemStatus(itemId, currentStatus) {
+        const newStatus = !currentStatus;
+        fetch(`/api/toggle_item_status/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                is_available: newStatus
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 
+                    `Item ${newStatus ? 'made available' : 'marked out of stock'}`, 
+                    'success');
+                loadMenuItems();
+            }
+        });
+    }
+    
+    function deleteMenuItem(itemId) {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+        
+        fetch(`/api/delete_menu_item/${itemId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Success', 'Menu item deleted', 'success');
+                loadMenuItems();
+            }
+        });
+    }
+    
+    function showBulkPriceUpdate() {
+        // Populate categories
+        const categorySelect = document.getElementById('bulkCategory');
+        let html = '<option value="">All Categories</option>';
+        categories.forEach(category => {
+            html += `<option value="${category}">${category}</option>`;
+        });
+        categorySelect.innerHTML = html;
+        
+        // Update affected items count
+        updateAffectedItemsCount();
+        
+        $('#bulkPriceModal').modal('show');
+    }
+    
+    function updateAffectedItemsCount() {
+        const category = document.getElementById('bulkCategory').value;
+        let filteredItems = menuItems;
+        
+        if (category) {
+            filteredItems = menuItems.filter(item => item.category === category);
+        }
+        
+        document.getElementById('affectedItemsCount').textContent = filteredItems.length;
+    }
+    
+    function refreshMenu() {
+        loadMenuItems();
+        showNotification('Info', 'Menu refreshed', 'info');
+    }
+    
+    function exportMenu() {
+        // In a real app, this would generate a file
+        showNotification('Info', 'Export feature coming soon!', 'info');
+    }
+</script>
+{% endblock %}

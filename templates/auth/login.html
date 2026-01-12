@@ -1,0 +1,160 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-sign-in-alt text-primary"></i> Login
+            </h2>
+            
+            <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        </div>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="Enter your email" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        </div>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="Enter your password" required>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Remember me</label>
+                    <a href="#" class="float-right">Forgot Password?</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+            
+            <hr class="my-4">
+            
+            <div class="text-center">
+                <p>Don't have an account? 
+                    <a href="{{ url_for('register') }}" class="text-primary">Register here</a>
+                </p>
+                <p class="mb-2">Or login with test accounts:</p>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="fillLogin('customer')">
+                        Customer
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="fillLogin('restaurant')">
+                        Restaurant
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="fillLogin('admin')">
+                        Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-card mt-4">
+            <h5><i class="fas fa-info-circle text-info"></i> About Credit System</h5>
+            <p class="mb-2">New users start with a credit score of 70.</p>
+            <div class="credit-meter">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge badge-danger">Blocked (0-29)</span>
+                    <span class="badge badge-warning">Risky (30-49)</span>
+                    <span class="badge badge-info">Average (50-74)</span>
+                    <span class="badge badge-success">Good (75-89)</span>
+                    <span class="badge badge-primary">Trusted (90-100)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordInput = document.getElementById('password');
+        const icon = this.querySelector('i');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+    
+    // Fill login form with test accounts
+    function fillLogin(accountType) {
+        let email, password;
+        
+        switch(accountType) {
+            case 'customer':
+                email = 'ravi@gmail.com';
+                password = '1234';
+                break;
+            case 'restaurant':
+                email = 'r@gmail.com';
+                password = '1234';
+                break;
+            case 'admin':
+                email = 'admin@foodapp.com';
+                password = 'admin123';
+                break;
+            default:
+                return;
+        }
+        
+        document.getElementById('email').value = email;
+        document.getElementById('password').value = password;
+        
+        // Show notification
+        showNotification('Info', `Filled with ${accountType} account credentials`, 'info');
+    }
+    
+    // Show notification function
+    function showNotification(title, message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            <strong>${title}</strong> ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
+        
+        // Add to body
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+
+<style>
+    /* Add some custom styles for the notification */
+    .position-fixed {
+        position: fixed !important;
+    }
+</style>
+{% endblock %}
